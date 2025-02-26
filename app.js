@@ -9,11 +9,11 @@ const port = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+///function to get the timestamp
 function timeStamp(){const now = new Date();
     const hours = now.getHours()
     const minutes = now.getMinutes()
     const seconds = now.getSeconds()
-    // Example usage:
     return (hours+(minutes/10)+(seconds/100))
 
 
@@ -35,6 +35,7 @@ const middleware=(req,res,next)=>{
     }
     next()
 }
+// function to find the index of the task with the given id
 function findId(obj,Tid){
     for(let i=0;i<obj.tasks.length;i++){
         if(obj.tasks[i].id === Tid)
@@ -66,10 +67,11 @@ app.get('/tasks/:id',async(req,res)=>{
     try{
         const data= await fspromises.readFile("task.json","utf-8")
         const obj=JSON.parse(data)
-        if(inputid>obj.tasks.length){
+        const find = findId(obj,inputid)
+        if(find == -1){
             return res.status(404).send("id not found")
         }
-        res.json(obj.tasks[inputid-1])
+        res.json(obj.tasks[find])
 
     }catch(error){
         res.status(500).send("Internal server error")
@@ -105,12 +107,13 @@ app.put('/tasks/:id',middleware,async(req,res)=>{
         const data=await fspromises.readFile("task.json","utf-8")
         const obj=JSON.parse(data)
         const index=parseInt(req.params.id)
-        if(index>obj.tasks.length){
+        const find=findId(obj,index)
+        if(find==-1){
             return res.status(404).send("id not found")
         }
-        obj.tasks[index].title=req.body.title
-        obj.tasks[index].description=req.body.description
-        obj.tasks[index].completed=req.body.completed
+        obj.tasks[find].title=req.body.title
+        obj.tasks[find].description=req.body.description
+        obj.tasks[find].completed=req.body.completed
         fs.writeFileSync("task.json",JSON.stringify(obj))
         res.send("Updated task successfully")
     }catch(error){
@@ -130,7 +133,7 @@ app.delete('/tasks/:id',async (req,res)=>{
         return res.status(404).send("id not found")
     }
     obj.tasks=obj.tasks.filter((task)=>task.id!=delid)
-    fs.writeFileSync("task.json",JSON.stringify(obj))
+    await fspromises.writeFile("task.json",JSON.stringify(obj))
     res.send("Deleted successfully")
   }catch(error){
       res.status(500).send("Internal server error")

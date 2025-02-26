@@ -1,18 +1,37 @@
 const express = require('express');
 const app = express();
 const fs = require("fs");
+const fspromises= require('fs').promises
+
 const { type } = require('os');
 const port = 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+function timeStamp(){const now = new Date();
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    const seconds = now.getSeconds()
+    // Example usage:
+    return (hours+(minutes/10)+(seconds/100))
+
+
+}
+
+
 const middleware=(req,res,next)=>{
     const title=req.body.title
     const description=req.body.description
     const completed=req.body.completed
     if(typeof(completed)!="boolean"){
-        return res.status(400).send("error with input")
+        return res.status(400).send("error with input 1")
+    }
+    if(title==undefined || title==""){
+        return res.status(400).send("input error in title")
+    }
+    if(description==undefined || description ==""){
+        return res.status(400).send("error in description input")
     }
     next()
 }
@@ -23,98 +42,101 @@ function findId(obj,Tid){
     }
     return -1
 }
-app.get('/tasks',(req,res)=>{
-fs.readFile("task.json","utf-8",(err,data)=>{
-    const obj= JSON.parse(data)
+app.get('/tasks',async(req,res)=>{
+    const query=req.query.completed
+  try{
+    const data=await fspromises.readFile("task.json","utf-8")
+    const obj=JSON.parse(data)
     res.json(obj.tasks)
+
+  }catch(error){
+    res.status(500).send("Internal server error")
+
+  }
+
+    
+   
 })
 
-})
 
 
-app.get('/tasks/:id',(req,res)=>{
+
+app.get('/tasks/:id',async(req,res)=>{
     const inputid = parseInt(req.params.id)
-    fs.readFile("task.json","utf-8",(err,data)=>{
-     if(err){
-        return res.send("Issue reading file ")
-     }
-     const obj2 = JSON.parse(data)
-     const checkid=findId(obj2,inputid)
-     if(checkid == -1){
-        return res.status(404).send("id not found")
-     }
-      res.json(obj2.tasks[checkid])        
-    })
+    try{
+        const data= await fspromises.readFile("task.json","utf-8")
+        const obj=JSON.parse(data)
+        if(inputid>obj.tasks.length){
+            return res.status(404).send("id not found")
+        }
+        res.json(obj.tasks[inputid-1])
+
+    }catch(error){
+        res.status(500).send("Internal server error")
+    }
+     
     
 
 })
 
-app.post('/tasks',middleware,(req,res)=>{
-    fs.readFile("task.json","utf-8",(err,data)=>{
-        if(err){
-            return res.send("error reading file")
-        }
-     const obj = JSON.parse(data)
-     const newtaskid=obj.tasks.length
-     const newtask = {
-        "id": newtaskid+1,
+app.post('/tasks',middleware,async (req,res)=>{
+   try{
+    const data= await fspromises.readFile("task.json","utf-8")
+    const obj=JSON.parse(data)
+    const newtaskid=obj.tasks[obj.tasks.length-1].id
+    const newtask = {
+        "id": newtaskid,
         "title": req.body.title,
         "description": req.body.description,
-        "completed": req.body.completed
+        "completed": req.body.completed,
+        "timestamp": parseFloat(timeStamp().toFixed(2))
      }
      obj.tasks.push(newtask)
-     fs.writeFile("task.json",JSON.stringify(obj),(err)=>{
-        if(err){
-            return res.send("error")
-        }
-        res.status(201).send("Created todo")
-     })
+     await fs.writeFileSync("task.json",JSON.stringify(obj))
+     res.status(201).send("Created todo")
+   }
+    catch(error){
+        res.status(500).send("Internal server error")
+    }
 
-    })
 })
-app.put('/tasks/:id',middleware,(req,res)=>{
-    const getid=parseInt(req.params.id)
-    fs.readFile("task.json","utf-8",(err,data)=>{
-        if(err){
-            return res.send("error reading file")
+app.put('/tasks/:id',middleware,async(req,res)=>{
+    try{
+        const data=await fspromises.readFile("task.json","utf-8")
+        const obj=JSON.parse(data)
+        const index=parseInt(req.params.id)
+        if(index>obj.tasks.length){
+            return res.status(404).send("id not found")
         }
-     const obj = JSON.parse(data)
-     const findIdx= findId(obj,getid)
-     if(findIdx ==-1){
-        return res.status(404).send("id not found")
-     }
-       obj.tasks[findIdx].title=req.body.title
-       obj.tasks[findIdx].description=req.body.description
-       obj.tasks[findIdx].completed=req.body.completed
-     fs.writeFile("task.json",JSON.stringify(obj),(err)=>{
-        if(err){
-            return res.send("error")
-        }
-        res.send("Updated todo")
-     })
-
-    })
+        obj.tasks[index].title=req.body.title
+        obj.tasks[index].description=req.body.description
+        obj.tasks[index].completed=req.body.completed
+        fs.writeFileSync("task.json",JSON.stringify(obj))
+        res.send("Updated task successfully")
+    }catch(error){
+        res.status(500).send("Internal server error")
+    }
     
 })
 
 
-app.delete('/tasks/:id',(req,res)=>{
+app.delete('/tasks/:id',async (req,res)=>{
   const delid=parseInt(req.params.id)
-  fs.readFile('task.json','utf-8',(err,data)=>{
-    const obj= JSON.parse(data)
-    const checkid=findId(obj,delid)
-    if(checkid == -1){
+  try{
+    const data=await fspromises.readFile("task.json","utf-8")
+    const obj=JSON.parse(data)
+    const index=findId(obj,delid)
+    if(index==-1){
         return res.status(404).send("id not found")
     }
-    obj.tasks=obj.tasks.filter((element)=>element.id!=delid)
-    fs.writeFile('task.json',JSON.stringify(obj),(err)=>{
-        if(err){
-           return  res.status(500).send("Issue writing to the file")
-        }
-        res.send("Deleted task successfully")
-    })
+    obj.tasks=obj.tasks.filter((task)=>task.id!=delid)
+    fs.writeFileSync("task.json",JSON.stringify(obj))
+    res.send("Deleted successfully")
+  }catch(error){
+      res.status(500).send("Internal server error")
   }
-)
+ 
+  
 })
     
 

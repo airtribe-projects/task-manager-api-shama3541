@@ -9,15 +9,7 @@ const port = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-///function to get the timestamp
-function timeStamp(){const now = new Date();
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
-    const seconds = now.getSeconds()
-    return (hours+(minutes/10)+(seconds/100))
 
-
-}
 
 
 const middleware=(req,res,next)=>{
@@ -35,6 +27,18 @@ const middleware=(req,res,next)=>{
     }
     next()
 }
+const parseBoolean = (value) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return undefined; // Keeps it undefined if no valid boolean value is provided
+}
+
+// const filteridmiddleware=(req,res,next)=>{
+//     if(req.params.level!=high||req.params.level!="medium"||req.params.level!="low"){
+//         return  res.status(400).send("error in filter query")
+// }
+//     next()
+// }
 // function to find the index of the task with the given id
 function findId(obj,Tid){
     for(let i=0;i<obj.tasks.length;i++){
@@ -44,11 +48,16 @@ function findId(obj,Tid){
     return -1
 }
 app.get('/tasks',async(req,res)=>{
-    const query=req.query.completed
+    const query=parseBoolean(req.query.completed)
   try{
     const data=await fspromises.readFile("task.json","utf-8")
     const obj=JSON.parse(data)
-    res.json(obj.tasks)
+    if (query==undefined){
+        const filterobj= obj.tasks.filter((task)=>task.completed===query)
+        return res.json(obj.tasks)
+    }
+    const filterobj= obj.tasks.sort((a,b)=>a.timestamp-b.timestamp)
+    res.json(filterobj)
 
   }catch(error){
     res.status(500).send("Internal server error")
@@ -60,6 +69,20 @@ app.get('/tasks',async(req,res)=>{
 })
 
 
+app.get('/tasks/filter/:level',async(req,res)=>{
+    const level=req.params.level
+   try{
+    const data= await fspromises.readFile("task.json","utf-8")
+    const obj=JSON.parse(data)
+    const filteredTasks=obj.tasks.filter((task)=>task.priority==level)
+    res.json({level,filteredTasks})
+    }catch(error){
+       res.status(500).send("Internal server error")
+    }
+
+
+
+})
 
 
 app.get('/tasks/:id',async(req,res)=>{
@@ -85,13 +108,17 @@ app.post('/tasks',middleware,async (req,res)=>{
    try{
     const data= await fspromises.readFile("task.json","utf-8")
     const obj=JSON.parse(data)
-    const newtaskid=obj.tasks[obj.tasks.length-1].id
+    let newtaskid=1
+   if(obj.tasks.length>0){
+     newtaskid=obj.tasks[obj.tasks.length-1].id + 1
+   }
     const newtask = {
         "id": newtaskid,
         "title": req.body.title,
         "description": req.body.description,
         "completed": req.body.completed,
-        "timestamp": parseFloat(timeStamp().toFixed(2))
+        "priority": req.body.priority,
+        "timestamp": Date.now()
      }
      obj.tasks.push(newtask)
      await fs.writeFileSync("task.json",JSON.stringify(obj))

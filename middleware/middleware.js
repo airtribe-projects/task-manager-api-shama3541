@@ -3,7 +3,7 @@ const middleware=(req,res,next)=>{
     const description=req.body.description
     const completed=req.body.completed
     if(typeof(completed)!="boolean"){
-        return res.status(400).send("error with input 1")
+        return res.status(400).send("error with completed input")
     }
     if(title==undefined || title==""){
         return res.status(400).send("input error in title")
@@ -20,6 +20,5 @@ const filteridmiddleware=(req,res,next)=>{
 }
     next()
 }
-
 
 module.exports={middleware,filteridmiddleware}

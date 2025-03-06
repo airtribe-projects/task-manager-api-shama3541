@@ -5,15 +5,9 @@ const fspromises= require('fs').promises
 const parseBoolean = (value) => {
     if (value === 'true') return true;
     if (value === 'false') return false;
-    return undefined; // Keeps it undefined if no valid boolean value is provided
+    return undefined; 
 }
 
-// const filteridmiddleware=(req,res,next)=>{
-//     if(req.params.level!=high||req.params.level!="medium"||req.params.level!="low"){
-//         return  res.status(400).send("error in filter query")
-// }
-//     next()
-// }
 // function to find the index of the task with the given id
 function findId(obj,Tid){
     for(let i=0;i<obj.tasks.length;i++){
@@ -25,13 +19,13 @@ function findId(obj,Tid){
 
 async function getalltasks(req,res){
     try {
-        const query = parseBoolean(req.query.completed);  // Get the completed filter as Boolean
+        const query = parseBoolean(req.query.completed);  
         const data = await fspromises.readFile("task.json", "utf-8");
         const obj = JSON.parse(data);
 
         if (query !== undefined) {
             const newobj = obj.tasks.filter(task => task.completed === query);
-            return res.json(newobj);  // `newobj` is already an array, no need for `.tasks`
+            return res.json(newobj);  
         }
 
         const sortedTasks = obj.tasks.sort((a, b) => a.timestamp - b.timestamp);
@@ -42,8 +36,6 @@ async function getalltasks(req,res){
 }
 
     
-   
-// }
 
 
 async function gettaskbylevel(req,res){

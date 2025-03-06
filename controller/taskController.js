@@ -110,7 +110,7 @@ async function updateTask(req,res){
         obj.tasks[find].title=req.body.title
         obj.tasks[find].description=req.body.description
         obj.tasks[find].completed=req.body.completed
-        fs.writeFileSync("task.json",JSON.stringify(obj))
+        await fspromises.writeFile("task.json",JSON.stringify(obj))
         res.send("Updated task successfully")
     }catch(error){
         res.status(500).send("Internal server error")

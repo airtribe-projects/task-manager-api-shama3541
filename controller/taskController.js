@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require('fs');
 const fspromises= require('fs').promises
 
 
@@ -138,5 +138,4 @@ async function deleteTask(req,res){
   
 }
     
-
 module.exports={getalltasks,updateTask,gettaskbyid,gettaskbylevel,createtask,deleteTask}
